@@ -2,6 +2,8 @@ module DemoIO where
 
 import Graphics.Gloss.Interface.Pure.Game
 import System.Random
+import System.Environment
+import Text.Read
 
 --------------
 -- Data types.
@@ -87,6 +89,10 @@ handleEvent (EventKey (SpecialKey KeySpace) Down _ _) (AppState _ r c) =
   let (newn, newr) = randomR numbersRange r
   -- Update BOTH number AND generator.
   in AppState newn newr c
+    -- on mouse button replace with 0
+handleEvent (EventKey (MouseButton _) Down _ _) state =
+  state { number = 0 }
+
 -- Ignore all other events.
 handleEvent _ state = state
 
@@ -94,6 +100,11 @@ handleEvent _ state = state
 updateApp :: Float -> AppState -> AppState
 updateApp _ x = x
 
+argCheck :: [String] -> Maybe (Int)
+argCheck [path, initNum] = case (readMaybe initNum) of
+							Nothing -> Nothing
+							Just number -> Just (number)
+argCheck _ = Nothing
 ------------------------------
 -- Main function for this app.
 ------------------------------
@@ -101,14 +112,18 @@ updateApp _ x = x
 -- Run game. This is the ONLY unpure function.
 run :: IO ()
 run = do
-  -- Load config file contents (unpure action).
-  str <- readFile configPath
-  -- Try to parse config.
-  case parseConfig str of
-    Nothing -> putStrLn "Wrong config"
-    Just cfg -> do
-      -- Get new random number generator (unpure action).
-      rndGen <- newStdGen
-      -- Run application.
-      play display bgColor fps (AppState 0 rndGen cfg) drawApp
-        handleEvent updateApp
+  args <- getArgs
+  case argCheck args of
+    Nothing -> putStrLn "You didn't enter a number!"
+    Just number -> do
+    	-- Load config file contents (unpure action).
+      str <- readFile (head args)
+      -- Try to parse config.
+      case parseConfig str of
+    		Nothing -> putStrLn "Wrong config"
+    		Just cfg -> do
+    			-- Get new random number generator (unpure action).
+    			rndGen <- newStdGen
+    			-- Run application.
+    			play display bgColor fps (AppState number rndGen cfg) drawApp
+    			  handleEvent updateApp
